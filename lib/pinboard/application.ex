@@ -17,7 +17,9 @@ defmodule Pinboard.Application do
       # Start a worker by calling: Pinboard.Worker.start_link(arg)
       # {Pinboard.Worker, arg},
       # Start to serve requests, typically the last entry
-      PinboardWeb.Endpoint
+      PinboardWeb.Endpoint,
+      # Presence tracking module
+      PinboardWeb.Presence
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -1,8 +1,12 @@
 defmodule PinboardWeb.FeedLive.Index do
   use PinboardWeb, :live_view
+  alias PinboardWeb.Presence
+
   alias Pinboard.Posts
   alias Pinboard.Posts.Post
   alias Pinboard.Posts.Comment
+
+  @presence_topic "users:presence"
 
   # Render loading view initially while the socket is not connected
   @impl true
@@ -15,6 +19,9 @@ defmodule PinboardWeb.FeedLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
+    <pre>
+      <%= inspect(@presences, pretty: true) %>
+    </pre>
     <div class="container">
       <h1 class="text-2xl">Welcome to your pinboard feed!</h1>
       <p class="my-2 text-gray-600">
@@ -44,7 +51,12 @@ defmodule PinboardWeb.FeedLive.Index do
         id={post_id}
         class="w-full mx-auto flex flex-col gap-4 p-4 border rounded"
       >
-        <h3 class="font-black text-left">By: <%= post.user.email %></h3>
+        <h3 class="font-black text-left">
+          By: <%= post.user.email %>
+          <span class="px-1">
+            <%= if @presences[post.user_id |> Integer.to_string()], do: "🟢", else: "🔴" %>
+          </span>
+        </h3>
         <img src={post.image_link} alt={post.body} class="w-1/2 flex m-auto rounded" />
         <p class="text-sm text-gray-600 text-center italic"><%= post.body %></p>
         <h4 class="uppercase underline text-xs">Comments</h4>
@@ -57,6 +69,8 @@ defmodule PinboardWeb.FeedLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
+      %{current_user: current_user} = socket.assigns
+
       # initialize form
       form =
         %Post{}
@@ -66,10 +80,19 @@ defmodule PinboardWeb.FeedLive.Index do
       # Listen for new posts, process them in "handle_info" callback
       PinboardWeb.Endpoint.subscribe("posts")
 
+      # Announce presence
+      {:ok, _} =
+        Presence.track(self(), @presence_topic, current_user.id, %{
+          is_posting: false
+        })
+
+      presences = Presence.list(@presence_topic)
+
       socket =
         socket
         |> assign(form: form)
         |> assign(loading: false)
+        |> assign(presences: presences)
         |> allow_upload(:image, accept: ~w(.png .jpg), max_entries: 1)
         |> stream(:posts, Posts.list_all())
 
