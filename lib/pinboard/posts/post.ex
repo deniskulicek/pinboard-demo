@@ -13,9 +13,9 @@ defmodule Pinboard.Posts.Post do
   end
 
   @doc false
-  def changeset(post, attrs) do
+  def changeset(post, attrs \\ %{}) do
     post
     |> cast(attrs, [:body, :image_link, :user_id])
-    |> validate_required([:text, :user_id])
+    |> validate_required([:body, :user_id])
   end
 end
