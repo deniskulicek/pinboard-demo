@@ -44,10 +44,27 @@ defmodule PinboardWeb.FeedLive.Index do
     <.button type="button" class="my-4 w-full" phx-click={show_modal("new-post-modal")}>
       New Post
     </.button>
+
+    <%!-- Presence tracking example --%>
+    <div :for={{user_id, %{metas: metas}} <- @presences} id={user_id}>
+      <%= if(contains_posting?(metas)) do
+        user_presence = hd(metas)
+        "#{user_presence.email} is about to post someting..."
+      end %>
+    </div>
+
+    <%!-- New post modal --%>
     <.modal id="new-post-modal">
       <.simple_form for={@form} phx-change="validate" phx-submit="save-post">
         <.live_file_input upload={@uploads.image} required />
-        <.input field={@form[:body]} type="textarea" label="Text" required />
+        <.input
+          field={@form[:body]}
+          type="textarea"
+          label="Text"
+          required
+          phx-focus="start-posting"
+          phx-blur="stop-posting"
+        />
         <.button type="submit" phx-disable-with="Saving...">Create Post</.button>
       </.simple_form>
     </.modal>
@@ -94,7 +111,8 @@ defmodule PinboardWeb.FeedLive.Index do
       # Announce presence
       {:ok, _} =
         Presence.track(self(), @presence_topic, current_user.id, %{
-          is_posting: false
+          is_posting: false,
+          email: current_user.email
         })
 
       presences = Presence.list(@presence_topic)
@@ -146,6 +164,35 @@ defmodule PinboardWeb.FeedLive.Index do
       {:error, changeset} ->
         {:noreply, assign(socket, form: changeset)}
     end
+  end
+
+  # Handle presence events
+  def handle_event("start-posting", _params, socket) do
+    %{current_user: current_user} = socket.assigns
+
+    Presence.update(self(), @presence_topic, current_user.id, %{
+      is_posting: true,
+      email: current_user.email
+    })
+
+    {:noreply, socket}
+  end
+
+  # Handle stop posting event, broadcast presence update that user is no longer "posting"
+  def handle_event("stop-posting", _params, socket) do
+    %{current_user: current_user} = socket.assigns
+
+    Presence.update(self(), @presence_topic, current_user.id, %{
+      is_posting: false,
+      email: current_user.email
+    })
+
+    {:noreply, socket}
+  end
+
+  defp contains_posting?(metas) do
+    # Users can have multiple presences, mark them as posting if they are posting in any of them
+    Enum.any?(metas, & &1.is_posting)
   end
 
   # Handle new posts broadcasted from the server
