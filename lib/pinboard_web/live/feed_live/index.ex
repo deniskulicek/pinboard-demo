@@ -4,7 +4,6 @@ defmodule PinboardWeb.FeedLive.Index do
 
   alias Pinboard.Posts
   alias Pinboard.Posts.Post
-  alias Pinboard.Posts.Comment
 
   @presence_topic "users:presence"
 
@@ -82,9 +81,13 @@ defmodule PinboardWeb.FeedLive.Index do
             <%= render_presence_status(@presences, post.user_id) %>
           </span>
         </h3>
-        <img src={post.image_link} alt={post.body} class="w-1/2 flex m-auto rounded-lg" />
-        <p class="text-sm text-gray-600 text-center italic"><%= post.body %></p>
-        <h4 class="uppercase underline text-xs">Comments (<%= length(post.comments) %>)</h4>
+        <a href={~p"/posts/#{post}"}>
+          <img src={post.image_link} alt={post.body} class="w-1/2 flex m-auto rounded-lg" />
+          <p class="text-sm text-gray-600 text-center italic"><%= post.body %></p>
+        </a>
+        <a class="uppercase underline text-xs" href={~p"/posts/#{post}"}>
+          Comments (<%= length(post.comments) %>)
+        </a>
         <ul class="text-xs">
           <li
             :for={comment <- post.comments}
@@ -123,6 +126,7 @@ defmodule PinboardWeb.FeedLive.Index do
       # Announce presence
       {:ok, _} =
         Presence.track(self(), @presence_topic, current_user.id, %{
+          is_typing: false,
           is_posting: false,
           email: current_user.email
         })
@@ -182,10 +186,9 @@ defmodule PinboardWeb.FeedLive.Index do
   def handle_event("start-posting", _params, socket) do
     %{current_user: current_user} = socket.assigns
 
-    Presence.update(self(), @presence_topic, current_user.id, %{
-      is_posting: true,
-      email: current_user.email
-    })
+    Presence.update(self(), @presence_topic, current_user.id, fn state ->
+      Map.put(state, :is_posting, true)
+    end)
 
     {:noreply, socket}
   end
@@ -194,10 +197,9 @@ defmodule PinboardWeb.FeedLive.Index do
   def handle_event("stop-posting", _params, socket) do
     %{current_user: current_user} = socket.assigns
 
-    Presence.update(self(), @presence_topic, current_user.id, %{
-      is_posting: false,
-      email: current_user.email
-    })
+    Presence.update(self(), @presence_topic, current_user.id, fn state ->
+      Map.put(state, :is_posting, false)
+    end)
 
     {:noreply, socket}
   end

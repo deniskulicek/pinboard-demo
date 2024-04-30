@@ -9,7 +9,7 @@ defmodule Pinboard.Posts.Post do
     field :body, :string
     field :image_link, :string
     belongs_to :user, User
-    has_many :comments, Comment
+    has_many :comments, Comment, preload_order: [desc: :id]
 
     timestamps(type: :utc_datetime)
   end

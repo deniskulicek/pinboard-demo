@@ -3,6 +3,7 @@ defmodule Pinboard.Posts do
 
   alias Pinboard.Repo
   alias Pinboard.Posts.Post
+  alias Pinboard.Posts.Comment
 
   def list_all() do
     Post
@@ -10,6 +11,19 @@ defmodule Pinboard.Posts do
     |> preload(:user)
     |> preload(comments: :user)
     |> Repo.all()
+  end
+
+  def show(id) do
+    Post
+    |> Repo.get(id)
+    |> Repo.preload(:user)
+    |> Repo.preload(comments: :user)
+  end
+
+  def insert_comment(comment_params) do
+    %Comment{}
+    |> Comment.changeset(comment_params)
+    |> Repo.insert()
   end
 
   def save(post_params) do

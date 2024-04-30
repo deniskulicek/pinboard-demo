@@ -67,6 +67,7 @@ defmodule PinboardWeb.Router do
     live_session :require_authenticated_user,
       on_mount: [{PinboardWeb.UserAuth, :ensure_authenticated}] do
       live "/feed", FeedLive.Index, :index
+      live "/posts/:id", PostsLive.Show, :show
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
     end

@@ -1,0 +1,59 @@
+<%= if @loading do %>
+  Loading...
+<% else %>
+  <div id={"post-#{@post.id}"} class="w-full mx-auto flex flex-col gap-4 p-4 border rounded-lg">
+    <h3 class="font-black text-left">
+      By: <%= @post.user.email %>
+      <span class="px-1">
+        <%= render_presence_status(@presences, @post.user_id) %>
+      </span>
+    </h3>
+    <img src={@post.image_link} alt={@post.body} class="w-1/2 flex m-auto rounded-lg" />
+    <p class="text-sm text-gray-600 text-center italic"><%= @post.body %></p>
+    <p>
+      Comments (<%= length(@post.comments) %>)
+    </p>
+
+    <%!-- Presence tracking example --%>
+    <div :for={{user_id, %{metas: metas}} <- @presences} id={user_id}>
+      <%= if(is_typing?(metas)) do
+        user_presence = hd(metas)
+
+        if(user_presence.email == @current_user.email) do
+          "You are typing..."
+        else
+          "#{user_presence.email} is typing..."
+        end
+      end %>
+    </div>
+    <.form
+      class="my-0 flex flex-row"
+      for={@form}
+      phx-change="validate"
+      phx-submit="send-comment"
+      class="flex flex-col"
+    >
+      <.input
+        field={@form[:body]}
+        type="textarea"
+        required
+        phx-focus="start-typing"
+        phx-blur="stop-typing"
+      />
+      <.button type="submit">Send</.button>
+    </.form>
+    <ul class="text-xs">
+      <li
+        :for={comment <- @post.comments}
+        id={"comment-#{comment.id}"}
+        class="flex flex-col gap-2 p-2 border rounded-lg"
+      >
+        <p class="text-xs text-gray-400">
+          <%= comment.user.email %>
+          <%= render_presence_status(@presences, comment.user_id) %>
+        </p>
+        <p class="text-gray-600">By: <%= comment.body %></p>
+      </li>
+    </ul>
+  </div>
+<% end %>
