@@ -19,8 +19,13 @@ defmodule PinboardWeb.FeedLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
+    <h3>Presences</h3>
     <pre>
       <%= inspect(@presences, pretty: true) %>
+    </pre>
+    <h3>Diffs</h3>
+    <pre>
+      <%= inspect(@diff, pretty: true) %>
     </pre>
     <div class="container">
       <h1 class="text-2xl">Welcome to your pinboard feed!</h1>
@@ -80,6 +85,9 @@ defmodule PinboardWeb.FeedLive.Index do
       # Listen for new posts, process them in "handle_info" callback
       PinboardWeb.Endpoint.subscribe("posts")
 
+      # Subscribe to presence topic
+      Phoenix.PubSub.subscribe(Pinboard.PubSub, @presence_topic)
+
       # Announce presence
       {:ok, _} =
         Presence.track(self(), @presence_topic, current_user.id, %{
@@ -93,6 +101,7 @@ defmodule PinboardWeb.FeedLive.Index do
         |> assign(form: form)
         |> assign(loading: false)
         |> assign(presences: presences)
+        |> assign(diff: nil)
         |> allow_upload(:image, accept: ~w(.png .jpg), max_entries: 1)
         |> stream(:posts, Posts.list_all())
 
@@ -145,6 +154,73 @@ defmodule PinboardWeb.FeedLive.Index do
       |> stream_insert(:posts, post, at: 0)
 
     {:noreply, socket}
+  end
+
+  # Presence updates
+  # Handle presence updates
+  def handle_info(%{event: "presence_diff", payload: diff}, socket) do
+    socket =
+      socket
+      |> assign(:diff, diff)
+      |> remove_presences(diff.leaves)
+      |> add_presences(diff.joins)
+      # reload posts to update their user presence statuses
+      |> stream(:posts, Posts.list_all())
+
+    {:noreply, socket}
+  end
+
+  defp remove_presences(socket, leaves) do
+    presences = socket.assigns.presences
+
+    left_refs =
+      Enum.map(leaves, fn {_user_id, %{metas: metalist}} ->
+        Enum.map(metalist, & &1.phx_ref)
+      end)
+      |> List.flatten()
+
+    reject_left_refs = fn metas ->
+      Enum.reject(metas, fn entry ->
+        Enum.member?(left_refs, entry.phx_ref)
+      end)
+    end
+
+    updated_presences =
+      presences
+      |> Enum.reduce(%{}, fn {user_id, %{metas: metas}}, acc ->
+        new_metas = reject_left_refs.(metas)
+
+        if(Enum.empty?(new_metas)) do
+          acc
+        else
+          Map.put(acc, user_id, %{metas: new_metas})
+        end
+      end)
+
+    assign(socket, :presences, updated_presences)
+  end
+
+  defp add_presences(socket, joins) do
+    presences = socket.assigns.presences
+
+    updated_presences =
+      Enum.map(joins, fn {user_id, %{metas: metas}} ->
+        prev_metas = Map.get(presences, user_id)
+
+        new_metas =
+          if(prev_metas) do
+            # additional user presence session
+            [metas | prev_metas.metas] |> List.flatten() |> Enum.uniq()
+          else
+            # new user presence session
+            metas
+          end
+
+        {user_id, %{metas: new_metas}}
+      end)
+      |> Enum.into(%{})
+
+    assign(socket, :presences, Map.merge(presences, updated_presences))
   end
 
   # https://hexdocs.pm/phoenix_live_view/uploads.html#consume-uploaded-entries
