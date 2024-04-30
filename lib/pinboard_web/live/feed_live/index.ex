@@ -4,6 +4,14 @@ defmodule PinboardWeb.FeedLive.Index do
   alias Pinboard.Posts.Post
   alias Pinboard.Posts.Comment
 
+  # Render loading view initially while the socket is not connected
+  @impl true
+  def render(%{loading: true} = assigns) do
+    ~H"""
+    Loading...
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -17,8 +25,8 @@ defmodule PinboardWeb.FeedLive.Index do
         <li><b>Pro pro tip</b>: Open in multiple browsers as different users!</li>
       </ul>
     </div>
-    <hr />
-    <.button type="button" class="" phx-click={show_modal("new-post-modal")}>
+    <hr class="my-4" />
+    <.button type="button" class="mb-2" phx-click={show_modal("new-post-modal")}>
       New Post
     </.button>
     <.modal id="new-post-modal">
@@ -28,23 +36,44 @@ defmodule PinboardWeb.FeedLive.Index do
         <.button type="submit" phx-disable-with="Saving...">Create Post</.button>
       </.simple_form>
     </.modal>
+
+    <%!-- List posts --%>
+    <div id="feed" phx-update="stream" class="flex flex-col gap-4">
+      <div
+        :for={{post_id, post} <- @streams.posts}
+        id={post_id}
+        class="w-full mx-auto flex flex-col gap-4 p-4 border rounded"
+      >
+        <h3 class="font-black text-left">By: <%= post.user.email %></h3>
+        <img src={post.image_link} alt={post.body} class="w-1/2 flex m-auto rounded" />
+        <p class="text-sm text-gray-600 text-center italic"><%= post.body %></p>
+        <h4 class="uppercase underline text-xs">Comments</h4>
+        <p>todo</p>
+      </div>
+    </div>
     """
   end
 
   @impl true
   def mount(_params, _session, socket) do
-    # initialize form
-    form =
-      %Post{}
-      |> Post.changeset()
-      |> to_form(as: "post")
+    if connected?(socket) do
+      # initialize form
+      form =
+        %Post{}
+        |> Post.changeset()
+        |> to_form(as: "post")
 
-    socket =
-      socket
-      |> assign(form: form)
-      |> allow_upload(:image, accept: ~w(.png .jpg), max_entries: 1)
+      socket =
+        socket
+        |> assign(form: form)
+        |> assign(loading: false)
+        |> allow_upload(:image, accept: ~w(.png .jpg), max_entries: 1)
+        |> stream(:posts, Posts.list_all())
 
-    {:ok, socket}
+      {:ok, socket}
+    else
+      {:ok, assign(socket, loading: true)}
+    end
   end
 
   @impl true
