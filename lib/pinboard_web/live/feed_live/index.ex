@@ -103,7 +103,8 @@ defmodule PinboardWeb.FeedLive.Index do
           |> push_navigate(to: ~p"/feed")
 
         # Broadcast the new post to all subscribers
-        PinboardWeb.Endpoint.broadcast("posts", "new_post", post)
+        post_with_user = Map.put(post, :user, socket.assigns.current_user)
+        PinboardWeb.Endpoint.broadcast("posts", "new_post", post_with_user)
 
         {:noreply, socket}
 
