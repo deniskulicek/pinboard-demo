@@ -3,11 +3,13 @@ defmodule Pinboard.Posts.Post do
   import Ecto.Changeset
 
   alias Pinboard.Accounts.User
+  alias Pinboard.Posts.Comment
 
   schema "posts" do
     field :body, :string
     field :image_link, :string
     belongs_to :user, User
+    has_many :comments, Comment
 
     timestamps(type: :utc_datetime)
   end

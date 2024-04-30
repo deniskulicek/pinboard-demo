@@ -14,9 +14,9 @@ defmodule Pinboard.Posts.Comment do
   end
 
   @doc false
-  def changeset(comment, attrs) do
+  def changeset(comment, attrs \\ %{}) do
     comment
-    |> cast(attrs, [:body])
-    |> validate_required([:body])
+    |> cast(attrs, [:body, :user_id, :post_id])
+    |> validate_required([:body, :user_id, :post_id])
   end
 end
