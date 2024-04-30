@@ -19,14 +19,15 @@ defmodule PinboardWeb.FeedLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <h3>Presences</h3>
-    <pre>
-      <%= inspect(@presences, pretty: true) %>
-    </pre>
-    <h3>Diffs</h3>
-    <pre>
-      <%= inspect(@diff, pretty: true) %>
-    </pre>
+    <%!-- Helpful debug info --%>
+    <div class="bg-slate-900 text-white overflow-auto text-xs h-[180px]">
+      <p class="mb-2 font-black">Presences</p>
+      <pre><%= inspect(@presences, pretty: true) %></pre>
+      <p class="my-2 font-black">Diffs</p>
+      <pre><%= inspect(@diff, pretty: true) %></pre>
+    </div>
+
+    <%!-- Project info --%>
     <div class="container">
       <h1 class="text-2xl">Welcome to your pinboard feed!</h1>
       <p class="my-2 text-gray-600">
@@ -37,8 +38,10 @@ defmodule PinboardWeb.FeedLive.Index do
         <li><b>Pro pro tip</b>: Open in multiple browsers as different users!</li>
       </ul>
     </div>
-    <hr class="my-4" />
-    <.button type="button" class="mb-2" phx-click={show_modal("new-post-modal")}>
+
+    <%!-- Posts --%>
+    <hr class="mt-4" />
+    <.button type="button" class="my-4 w-full" phx-click={show_modal("new-post-modal")}>
       New Post
     </.button>
     <.modal id="new-post-modal">
@@ -54,7 +57,7 @@ defmodule PinboardWeb.FeedLive.Index do
       <div
         :for={{post_id, post} <- @streams.posts}
         id={post_id}
-        class="w-full mx-auto flex flex-col gap-4 p-4 border rounded"
+        class="w-full mx-auto flex flex-col gap-4 p-4 border rounded-lg"
       >
         <h3 class="font-black text-left">
           By: <%= post.user.email %>
@@ -62,7 +65,7 @@ defmodule PinboardWeb.FeedLive.Index do
             <%= if @presences[post.user_id |> Integer.to_string()], do: "🟢", else: "🔴" %>
           </span>
         </h3>
-        <img src={post.image_link} alt={post.body} class="w-1/2 flex m-auto rounded" />
+        <img src={post.image_link} alt={post.body} class="w-1/2 flex m-auto rounded-lg" />
         <p class="text-sm text-gray-600 text-center italic"><%= post.body %></p>
         <h4 class="uppercase underline text-xs">Comments</h4>
         <p>todo</p>
