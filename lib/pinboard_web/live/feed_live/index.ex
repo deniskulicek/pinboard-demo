@@ -63,6 +63,9 @@ defmodule PinboardWeb.FeedLive.Index do
         |> Post.changeset()
         |> to_form(as: "post")
 
+      # Listen for new posts, process them in "handle_info" callback
+      PinboardWeb.Endpoint.subscribe("posts")
+
       socket =
         socket
         |> assign(form: form)
@@ -93,17 +96,31 @@ defmodule PinboardWeb.FeedLive.Index do
     |> Map.put("image_link", consume_files(socket) |> List.first())
     |> Posts.save()
     |> case do
-      {:ok, _post} ->
+      {:ok, post} ->
         socket =
           socket
           |> put_flash(:info, "Post created!")
           |> push_navigate(to: ~p"/feed")
+
+        # Broadcast the new post to all subscribers
+        PinboardWeb.Endpoint.broadcast("posts", "new_post", post)
 
         {:noreply, socket}
 
       {:error, changeset} ->
         {:noreply, assign(socket, form: changeset)}
     end
+  end
+
+  # Handle new posts broadcasted from the server
+  @impl true
+  def handle_info(%{event: "new_post", payload: post}, socket) do
+    socket =
+      socket
+      |> put_flash(:info, "New post created")
+      |> stream_insert(:posts, post, at: 0)
+
+    {:noreply, socket}
   end
 
   # https://hexdocs.pm/phoenix_live_view/uploads.html#consume-uploaded-entries

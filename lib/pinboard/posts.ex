@@ -6,6 +6,7 @@ defmodule Pinboard.Posts do
 
   def list_all() do
     Post
+    |> order_by(desc: :id)
     |> preload(:user)
     |> Repo.all()
   end
