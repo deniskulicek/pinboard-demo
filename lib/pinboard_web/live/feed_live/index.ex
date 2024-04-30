@@ -79,13 +79,25 @@ defmodule PinboardWeb.FeedLive.Index do
         <h3 class="font-black text-left">
           By: <%= post.user.email %>
           <span class="px-1">
-            <%= if @presences[post.user_id |> Integer.to_string()], do: "🟢", else: "🔴" %>
+            <%= render_presence_status(@presences, post.user_id) %>
           </span>
         </h3>
         <img src={post.image_link} alt={post.body} class="w-1/2 flex m-auto rounded-lg" />
         <p class="text-sm text-gray-600 text-center italic"><%= post.body %></p>
-        <h4 class="uppercase underline text-xs">Comments</h4>
-        <p>todo</p>
+        <h4 class="uppercase underline text-xs">Comments (<%= length(post.comments) %>)</h4>
+        <ul class="text-xs">
+          <li
+            :for={comment <- post.comments}
+            id={"comment-#{comment.id}"}
+            class="flex flex-col gap-2 p-2 border rounded-lg"
+          >
+            <p class="text-xs text-gray-400">
+              <%= comment.user.email %>
+              <%= render_presence_status(@presences, comment.user_id) %>
+            </p>
+            <p class="text-gray-600">By: <%= comment.body %></p>
+          </li>
+        </ul>
       </div>
     </div>
     """
@@ -193,6 +205,14 @@ defmodule PinboardWeb.FeedLive.Index do
   defp contains_posting?(metas) do
     # Users can have multiple presences, mark them as posting if they are posting in any of them
     Enum.any?(metas, & &1.is_posting)
+  end
+
+  defp render_presence_status(presences, user_id) when is_integer(user_id) do
+    if presences[user_id |> Integer.to_string()], do: "🟢", else: "🔴"
+  end
+
+  defp render_presence_status(presences, user_id) do
+    if presences[user_id], do: "🟢", else: "🔴"
   end
 
   # Handle new posts broadcasted from the server

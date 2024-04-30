@@ -8,7 +8,7 @@ defmodule Pinboard.Posts do
     Post
     |> order_by(desc: :id)
     |> preload(:user)
-    |> preload(:comments)
+    |> preload(comments: :user)
     |> Repo.all()
   end
 
