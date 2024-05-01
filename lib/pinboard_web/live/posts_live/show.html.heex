@@ -16,13 +16,11 @@
 
     <%!-- Presence tracking example --%>
     <div :for={{user_id, %{metas: metas}} <- @presences} id={user_id}>
-      <%= if(is_typing?(metas)) do
+      <%= if(is_typing_on_post?(@post, metas)) do
         user_presence = hd(metas)
 
-        if(user_presence.email == @current_user.email) do
-          "You are typing..."
-        else
-          "#{user_presence.email} is typing..."
+        if(user_presence.email != @current_user.email) do
+          "#{user_presence.email} is typing a comment..."
         end
       end %>
     </div>

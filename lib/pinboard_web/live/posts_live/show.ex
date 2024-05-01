@@ -27,7 +27,7 @@ defmodule PinboardWeb.PostsLive.Show do
       # Announce presence - ideally we want to do this in a shared live component (not duplicated in every live view)
       {:ok, _} =
         Presence.track(self(), @presence_topic, current_user.id, %{
-          is_typing: false,
+          is_typing_post_id: nil,
           is_posting: false,
           email: current_user.email
         })
@@ -72,12 +72,12 @@ defmodule PinboardWeb.PostsLive.Show do
         socket =
           socket
           |> put_flash(:info, "Comment added!")
-
-        # |> push_navigate(to: ~p"/feed")
+          |> push_navigate(to: ~p"/posts/#{post.id}")
 
         # Broadcast the new post to all subscribers
         comment_data = Map.put(comment, :user, current_user) |> Map.put(:post, post)
         PinboardWeb.Endpoint.broadcast("post:#{post.id}:comments", "new_comment", comment_data)
+        PinboardWeb.Endpoint.broadcast("comments", "new_post_comment", comment_data)
 
         {:noreply, socket}
 
@@ -88,10 +88,10 @@ defmodule PinboardWeb.PostsLive.Show do
 
   # Handle presence events
   def handle_event("start-typing", _params, socket) do
-    %{current_user: current_user} = socket.assigns
+    %{current_user: current_user, post: post} = socket.assigns
 
     Presence.update(self(), @presence_topic, current_user.id, fn state ->
-      Map.put(state, :is_typing, true)
+      Map.put(state, :is_typing_post_id, post.id)
     end)
 
     {:noreply, socket}
@@ -101,7 +101,7 @@ defmodule PinboardWeb.PostsLive.Show do
     %{current_user: current_user} = socket.assigns
 
     Presence.update(self(), @presence_topic, current_user.id, fn state ->
-      Map.put(state, :is_typing, false)
+      Map.put(state, :is_typing_post_id, nil)
     end)
 
     {:noreply, socket}
@@ -140,8 +140,8 @@ defmodule PinboardWeb.PostsLive.Show do
     if presences[user_id], do: "🟢", else: "🔴"
   end
 
-  defp is_typing?(metas) do
+  defp is_typing_on_post?(post, metas) do
     # Users can have multiple presences, mark them as typing if they are typing in any of them
-    Enum.any?(metas, & &1.is_typing)
+    Enum.any?(metas, &(&1.is_typing_post_id == post.id))
   end
 end
