@@ -15,7 +15,7 @@ defmodule PinboardWeb.UserSessionControllerTest do
         })
 
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/feed"
 
       # Now do a logged in request and assert on the menu
       conn = get(conn, ~p"/")
@@ -36,7 +36,7 @@ defmodule PinboardWeb.UserSessionControllerTest do
         })
 
       assert conn.resp_cookies["_pinboard_web_user_remember_me"]
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/feed"
     end
 
     test "logs the user in with return to", %{conn: conn, user: user} do
@@ -65,7 +65,7 @@ defmodule PinboardWeb.UserSessionControllerTest do
           }
         })
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/feed"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Account created successfully"
     end
 
