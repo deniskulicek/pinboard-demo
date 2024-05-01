@@ -47,7 +47,7 @@ defmodule PinboardWeb.PresenceTest do
         |> Phoenix.Component.assign(:presences, @base_presences)
         |> PinboardWeb.Presence.handle_diff(@leaves_diff)
 
-      assert %{} = socket.assigns.presences
+      assert Enum.empty?(socket.assigns.presences)
     end
 
     test "when dealing with multiple presences only removes the leaving presence" do
