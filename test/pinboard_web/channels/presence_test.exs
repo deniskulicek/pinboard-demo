@@ -60,5 +60,23 @@ defmodule PinboardWeb.PresenceTest do
                "1" => %{metas: [%{phx_ref: "A2", is_posting: false}]}
              } = socket.assigns.presences
     end
+
+    test "when dealing with multiple presences and all leave, removes all presences" do
+      all_left = %{
+        joins: %{},
+        leaves: %{
+          "1" => %{
+            metas: [%{phx_ref: "AAA", is_posting: false}, %{phx_ref: "A2", is_posting: false}]
+          }
+        }
+      }
+
+      socket =
+        %Phoenix.LiveView.Socket{}
+        |> Phoenix.Component.assign(:presences, @multiple_presences)
+        |> PinboardWeb.Presence.handle_diff(all_left)
+
+      assert Enum.empty?(socket.assigns.presences)
+    end
   end
 end
