@@ -120,13 +120,16 @@ defmodule PinboardWeb.FeedLive.Index do
       # Listen for new posts, process them in "handle_info" callback
       PinboardWeb.Endpoint.subscribe("posts")
 
+      # Listen for new comments (this gets called in the show live view)
+      PinboardWeb.Endpoint.subscribe("comments")
+
       # Subscribe to presence topic
       Phoenix.PubSub.subscribe(Pinboard.PubSub, @presence_topic)
 
       # Announce presence
       {:ok, _} =
         Presence.track(self(), @presence_topic, current_user.id, %{
-          is_typing: false,
+          is_typing_post_id: nil,
           is_posting: false,
           email: current_user.email
         })
@@ -224,6 +227,31 @@ defmodule PinboardWeb.FeedLive.Index do
       socket
       |> put_flash(:info, "New post created")
       |> stream_insert(:posts, post, at: 0)
+
+    {:noreply, socket}
+  end
+
+  # Handle new comment broadcasted from the server - monkey patch posts list
+  @impl true
+  def handle_info(%{event: "new_post_comment", payload: comment}, socket) do
+    # can't do this because we streamed the posts
+    # posts =
+    #  socket.assigns.streams.posts
+    #  |> Enum.map(fn post ->
+    #    if post.id == comment.post_id do
+    #      Map.put(post, :comments, [comment | post.comments])
+    #    else
+    #      post
+    #    end
+    #  end)
+
+    # refetch the post (because we streamed it and are not keeping it in memory)
+    post = Posts.show(comment.post_id)
+
+    socket =
+      socket
+      |> put_flash(:info, "New comment: #{comment.body}")
+      |> stream_insert(:posts, post)
 
     {:noreply, socket}
   end
